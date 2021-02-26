@@ -15,10 +15,6 @@ namespace CartRover.Batch.App
         private int _Quantity;
         private decimal _UnitPrice;
         private decimal _Discount;
-
-
-
-
         public System.Int32 OrderDetID
         {
             get
@@ -87,80 +83,70 @@ namespace CartRover.Batch.App
             }
         }
 
-        public void Save()
+        public void SaveOrderDetail()
         {
             try
             {
-                string connectionString = @"Provider=Microsoft.Jet.OLEDB.4.0;Data Source=C:\Mahesh\Data\Dev.mdb";
-                string strSQL = "SELECT * FROM Developer";
-                using (OleDbConnection connection = new OleDbConnection(connectionString))
+                using (OleDbConnection connection = Common.DBConnection())
                 {
-                    OleDbCommand cmd = new OleDbCommand(strSQL, connection);
-                    cmd.CommandText = "INSERT INTO T_OrderDetails " + "([ODOID],[ODProductID],[ODQuantity],[ODUnitPrice],[ODDiscount]) " + "VALUES(@OrderID,@ProductID,@Quantity,@UnitPrice,@Discount)";
-                    cmd.Parameters.Add("@OrderID", OleDbType.Integer).Value = OrderID;
-                    cmd.Parameters.Add("@ProductID", OleDbType.Integer).Value = ProductID;
-                    cmd.Parameters.Add("@Quantity", OleDbType.Integer).Value = Quantity;
-                    cmd.Parameters.Add("@UnitPrice", OleDbType.Decimal).Value = UnitPrice;
-                    cmd.Parameters.Add("@Discount", OleDbType.Decimal).Value = Discount;
+                    using (OleDbCommand cmd = connection.CreateCommand())
+                    {
+                        {
+                            cmd.CommandText = "INSERT INTO T_OrderDetails " + "([ODOID],[ODProductID],[ODQuantity],[ODUnitPrice],[ODDiscount]) " + "VALUES(@OrderID,@ProductID,@Quantity,@UnitPrice,@Discount)";
+                        };
+                        cmd.Parameters.Add("@OrderID", OleDbType.Integer).Value = OrderID;
+                        cmd.Parameters.Add("@ProductID", OleDbType.Integer).Value = ProductID;
+                        cmd.Parameters.Add("@Quantity", OleDbType.Integer).Value = Quantity;
+                        cmd.Parameters.Add("@UnitPrice", OleDbType.Decimal).Value = UnitPrice;
+                        cmd.Parameters.Add("@Discount", OleDbType.Decimal).Value = Discount;
 
-                    cmd.ExecuteNonQuery();
+                        cmd.ExecuteNonQuery();
 
-                    string QryID = "Select @@Identity";
-                    cmd.CommandText = QryID;
-
-                    var iResult = cmd.ExecuteScalar();
-
-
-
-                    //if (iResult > 0)
-                    //_OrderDetID = iResult;
+                        string QryID = "Select @@Identity";
+                        cmd.CommandText = QryID;
+                        var iResult = cmd.ExecuteScalar();
+                        if (iResult != null)
+                            _OrderDetID = Convert.ToInt32(iResult);
+                        
+                    }
                     connection.Close();
                 }
 
-                //conn.Close();
             }
             catch (Exception ex)
             {
-                AddToLog("Error occured in fbOrderdetail.save: " + ex.Message, true);
+                throw new Exception("Error occured in fbOrderdetail.save: " + ex.Message);
             }
         }
 
         public int GetProdID(string sCode)
         {
-            OleDbConnection conn = Common.DBConnection();
-
-            OleDbCommand cmd = new OleDbCommand();
-            OleDbDataReader dr;
-
-
-
-            try
+            using (OleDbConnection conn = Common.DBConnection())
             {
-                cmd = conn.CreateCommand();
-                cmd.CommandText = "SELECT PID, SKUCode, UPCCode FROM T_Products WHERE SKUCode=@pSKU OR UPCCode=@pUPC";
-                cmd.Parameters.Add("@CodeSKU", OleDbType.VarChar).Value = sCode;
-                cmd.Parameters.Add("@CodeUPC", OleDbType.VarChar).Value = sCode;
+                OleDbDataReader dr;
+                try
+                {
+                    var cmd = conn.CreateCommand();
+                    cmd.CommandText = "SELECT PID, SKUCode, UPCCode FROM T_Products WHERE SKUCode=@pSKU OR UPCCode=@pUPC";
+                    cmd.Parameters.Add("@CodeSKU", OleDbType.VarChar).Value = sCode;
+                    cmd.Parameters.Add("@CodeUPC", OleDbType.VarChar).Value = sCode;
+                    dr = cmd.ExecuteReader();
+                    int iPID = -1;
+                    while ((dr.Read()))
+                    {
+                        iPID = Convert.ToInt32(dr[0]);
+                    }
+                    dr.Close();
+                    cmd.Dispose();
+                    conn.Close();
 
+                    return iPID;
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Error occured in fbOrderdetail.GetProdID: " + ex.Message);
 
-                dr = cmd.ExecuteReader();
-
-                int iPID;
-                while ((dr.Read()))
-                    iPID = dr[0];
-
-
-                dr.Close();
-                cmd.Dispose();
-                conn.Close();
-
-                return iPID;
-            }
-
-
-            catch (Exception ex)
-            {
-                AddToLog("Error occured in fbOrderdetail.GetProdID: " + ex.Message, true);
-                return 0;
+                }
             }
         }
     }
